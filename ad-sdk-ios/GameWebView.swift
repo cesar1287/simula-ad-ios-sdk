@@ -18,6 +18,8 @@ public struct GameWebView: View {
     let onAdIdReceived: (String) -> Void
     let onServeIdReceived: (String) -> Void
     
+    @State private var isLoading = true
+    
     public init(
         gameUrl: String,
         showBanner: Bool = true,
@@ -35,15 +37,50 @@ public struct GameWebView: View {
     }
     
     public var body: some View {
-        GameWebViewRepresentable(
-            gameUrl: gameUrl,
-            showBanner: showBanner,
-            serveId: serveId,
-            devMode: devMode,
-            onAdIdReceived: onAdIdReceived,
-            onServeIdReceived: onServeIdReceived
-        )
-        .background(Color.clear)
+        ZStack {
+            GameWebViewRepresentable(
+                gameUrl: gameUrl,
+                showBanner: showBanner,
+                serveId: serveId,
+                devMode: devMode,
+                isLoading: $isLoading,
+                onAdIdReceived: onAdIdReceived,
+                onServeIdReceived: onServeIdReceived
+            )
+            .background(Color.clear)
+            
+            if isLoading {
+                ZStack {
+                    Color(hex: "#0b0b0f").opacity(0.85)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color.blue))
+                            .scaleEffect(1.5)
+                        
+                        Text("Loading game...")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .opacity(0.9)
+                        
+                        Text("Please wait a moment")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 28)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(24)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.4), radius: 15, x: 0, y: 10)
+                }
+                .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+            }
+        }
     }
 }
 
@@ -54,6 +91,7 @@ struct GameWebViewRepresentable: UIViewRepresentable {
     let showBanner: Bool
     let serveId: String?
     let devMode: Bool
+    @Binding var isLoading: Bool
     let onAdIdReceived: (String) -> Void
     let onServeIdReceived: (String) -> Void
     
@@ -119,6 +157,32 @@ struct GameWebViewRepresentable: UIViewRepresentable {
         
         init(_ parent: GameWebViewRepresentable) {
             self.parent = parent
+        }
+        
+        // MARK: - WKNavigationDelegate
+        
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            DispatchQueue.main.async {
+                self.parent.isLoading = true
+            }
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            DispatchQueue.main.async {
+                self.parent.isLoading = false
+            }
+        }
+        
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            DispatchQueue.main.async {
+                self.parent.isLoading = false
+            }
+        }
+        
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            DispatchQueue.main.async {
+                self.parent.isLoading = false
+            }
         }
         
         // Capture postMessages from WKWebView

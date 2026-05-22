@@ -36,8 +36,8 @@ public struct AdWebView: View {
     
     public var body: some View {
         ZStack {
-            // Semi-transparent deep dark backdrop
-            Color.black.opacity(0.85)
+            // Solid dark backdrop to prevent safe area leaks
+            Color.black
                 .ignoresSafeArea()
             
             if isAditude {
@@ -177,9 +177,9 @@ struct AdSimpleWebViewRepresentable: UIViewRepresentable {
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.backgroundColor = .white
-        webView.isOpaque = true
-        webView.scrollView.backgroundColor = .white
+        webView.backgroundColor = .clear
+        webView.isOpaque = false
+        webView.scrollView.backgroundColor = .clear
         webView.scrollView.isScrollEnabled = false // Interstitial frames are display-only
         
         if let targetUrl = URL(string: url) {
