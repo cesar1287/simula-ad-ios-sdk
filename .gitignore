@@ -1,0 +1,30 @@
+# Xcode & Swift Build Artifacts
+build/
+DerivedData/
+
+# Xcode User Data & State Settings
+*.xcuserdata
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Crashlytics config
+crashlytics.plist
+
+# macOS Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent

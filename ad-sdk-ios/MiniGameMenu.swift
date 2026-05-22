@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import ImageIO
 
 /// The master SwiftUI View for displaying the MiniGame catalog overlay.
 /// Features a responsive layout that automatically adapts to trait-collections:
@@ -98,80 +99,83 @@ public struct MiniGameMenu: View {
     // MARK: - Body Layout
     
     public var body: some View {
-        ZStack {
-            if isOpen {
-                // Background overlay scrim
-                Color.black.opacity(0.5)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        isOpen = false
-                    }
-                    .transition(.opacity)
-                
-                // Visual Shell Container
-                VStack(spacing: 0) {
-                    // Header Bar with initials and character name
-                    menuHeaderView
-                    
-                    // Body Game catalog area
-                    Group {
-                        if isLoadingCatalog {
-                            loadingView
-                        } else if catalogError {
-                            errorView
-                        } else {
-                            catalogContentView
+        GeometryReader { outerGeometry in
+            ZStack {
+                if isOpen {
+                    // Background overlay scrim
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            isOpen = false
                         }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 24)
-                .frame(maxWidth: sizeClass == .regular ? 640 : .infinity)
-                .frame(height: sizeClass == .regular ? 640 : 640)
-                .background(
-                    ZStack {
-                        // Core solid background matching the original dark theme
-                        Color(hex: theme.backgroundColor ?? "#0b0b0f")
+                        .transition(.opacity)
+                    
+                    // Visual Shell Container
+                    VStack(spacing: 0) {
+                        // Header Bar with initials and character name
+                        menuHeaderView
                         
-                        // Captivating glowing radial gradients for maximum aesthetic appeal
-                        RadialGradient(
-                            colors: [Color.blue.opacity(0.12), Color.clear],
-                            center: .topLeading,
-                            startRadius: 5,
-                            endRadius: 360
-                        )
-                        RadialGradient(
-                            colors: [Color.purple.opacity(0.08), Color.clear],
-                            center: .topTrailing,
-                            startRadius: 5,
-                            endRadius: 320
-                        )
-                        RadialGradient(
-                            colors: [Color.cyan.opacity(0.09), Color.clear],
-                            center: .bottom,
-                            startRadius: 10,
-                            endRadius: 400
-                        )
+                        // Body Game catalog area
+                        Group {
+                            if isLoadingCatalog {
+                                loadingView
+                            } else if catalogError {
+                                errorView
+                            } else {
+                                catalogContentView(viewport: outerGeometry)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                )
-                .cornerRadius(24)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
-                .padding(.horizontal, sizeClass == .regular ? 0 : 16)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .bottom).combined(with: .opacity),
-                    removal: .move(edge: .bottom).combined(with: .opacity)
-                ))
-                .onAppear {
-                    loadMinigamesCatalog()
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
+                    .frame(width: sizeClass == .regular ? outerGeometry.size.width * 0.90 : nil)
+                    .frame(height: sizeClass == .regular ? outerGeometry.size.height * 0.95 : 640)
+                    .background(
+                        ZStack {
+                            // Core solid background matching the original dark theme
+                            Color(hex: theme.backgroundColor ?? "#0b0b0f")
+                            
+                            // Captivating glowing radial gradients for maximum aesthetic appeal
+                            RadialGradient(
+                                colors: [Color.blue.opacity(0.12), Color.clear],
+                                center: .topLeading,
+                                startRadius: 5,
+                                endRadius: 360
+                            )
+                            RadialGradient(
+                                colors: [Color.purple.opacity(0.08), Color.clear],
+                                center: .topTrailing,
+                                startRadius: 5,
+                                endRadius: 320
+                            )
+                            RadialGradient(
+                                colors: [Color.cyan.opacity(0.09), Color.clear],
+                                center: .bottom,
+                                startRadius: 10,
+                                endRadius: 400
+                            )
+                        }
+                    )
+                    .cornerRadius(24)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
+                    .padding(.horizontal, sizeClass == .regular ? 0 : 16)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    ))
+                    .onAppear {
+                        loadMinigamesCatalog()
+                    }
                 }
             }
+            .frame(width: outerGeometry.size.width, height: outerGeometry.size.height)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isOpen)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isOpen)
         // MARK: - Game View Overlay Sheet
         .fullScreenCover(isPresented: Binding(
             get: { isGameActive && activeGameUrl != nil },
@@ -257,7 +261,7 @@ public struct MiniGameMenu: View {
     private var menuHeaderView: some View {
         HStack(spacing: 16) {
             // Overlapping Character Image and Game Icon Spot
-            ZStack(alignment: .bottomTrailing) {
+            ZStack(alignment: .trailing) {
                 // Character Avatar
                 AsyncImage(url: URL(string: charImage)) { phase in
                     switch phase {
@@ -275,37 +279,37 @@ public struct MiniGameMenu: View {
                         }
                     }
                 }
-                .frame(width: 64, height: 64)
-                .cornerRadius(20)
+                .frame(width: 48, height: 48)
+                .cornerRadius(16)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.white.opacity(0.12), lineWidth: 1.5)
                 )
                 .shadow(radius: 6)
                 
-                // Sparkle Controller game controller overlaps
+                // Joystick badge overlap
                 ZStack {
                     Circle()
                         .fill(LinearGradient(colors: [Color.pink.opacity(0.8), Color.purple.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 24, height: 24)
                     
                     Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white)
                 }
-                .offset(x: 6, y: 6)
+                .offset(x: 8)
             }
             .padding(.top, 24)
             .padding(.bottom, 16)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text("Play a Game with")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.6))
+                    .font(.system(size: 17, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
                 
                 Text(charName)
-                    .font(.system(size: 20, weight: .black, design: .rounded))
-                    .foregroundColor(.white)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.6))
             }
             .padding(.top, 24)
             .padding(.bottom, 16)
@@ -370,17 +374,21 @@ public struct MiniGameMenu: View {
         gridGames.chunked(into: 4)
     }
     
-    private var catalogContentView: some View {
+    private func catalogContentView(viewport: GeometryProxy) -> some View {
         Group {
             if sizeClass == .regular {
                 // Horizontal paginated grid layout on regular horizontal classes (e.g. iPad, landscape orientation)
+                let ipadDialogWidth = viewport.size.width * 0.90
+                let ipadCardWidth = (ipadDialogWidth - 96) / 4
+                let ipadCardHeight = ipadCardWidth * 1.75
+                
                 VStack(spacing: 12) {
                     TabView(selection: $currentGridPageIndex) {
                         ForEach(0..<chunkedGridGames.count, id: \.self) { pageIndex in
                             let pageGames = chunkedGridGames[pageIndex]
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
                                 ForEach(pageGames) { game in
-                                    GameCardBig(game: game, theme: theme, width: nil, height: nil, nameFontSize: 14) {
+                                    GameCardBig(game: game, theme: theme, width: ipadCardWidth, height: ipadCardHeight, nameFontSize: 14) {
                                         selectMinigame(game)
                                     }
                                 }
@@ -390,7 +398,7 @@ public struct MiniGameMenu: View {
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
-                    .frame(height: 260)
+                    .frame(height: ipadCardHeight + 20)
                     
                     // Small premium blue page indicator indicating how many pages are left
                     if chunkedGridGames.count > 1 {
@@ -407,18 +415,13 @@ public struct MiniGameMenu: View {
                     }
                 }
             } else {
-                // Horizontal list with big cards on compact width layout (e.g. iPhone)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(gridGames) { game in
-                            GameCardBig(game: game, theme: theme, width: 240, height: 420, nameFontSize: 20) {
-                                selectMinigame(game)
-                            }
-                        }
+                // Snapping Paging Carousel on compact width layout (e.g. iPhone)
+                PagingCarousel(items: gridGames, currentIndex: $currentGridPageIndex) { game, cardWidth in
+                    GameCardBig(game: game, theme: theme, width: cardWidth, height: cardWidth * 1.75, nameFontSize: 16) {
+                        selectMinigame(game)
                     }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 8)
                 }
+                .frame(height: 440)
             }
         }
     }
@@ -612,24 +615,9 @@ struct GameCardBig: View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
                 // Background Cover Image spanning the entire card
-                AsyncImage(url: URL(string: game.gifCover ?? game.iconUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    default:
-                        ZStack {
-                            Color.white.opacity(0.04)
-                            VStack(spacing: 8) {
-                                Text(game.iconFallback ?? "🎮")
-                                    .font(.system(size: (width ?? 138) * 0.25))
-                            }
-                        }
-                    }
-                }
-                .modifier(CardFrameModifier(width: width, height: height))
-                .clipped()
+                GIFImage(urlString: game.gifCover ?? game.iconUrl, fallbackText: game.iconFallback ?? "🎮", width: width)
+                    .modifier(CardFrameModifier(width: width, height: height))
+                    .clipped()
                 
                 // Bottom-aligned LinearGradient scrim for readability
                 LinearGradient(
@@ -651,8 +639,8 @@ struct GameCardBig: View {
                         .lineLimit(2)
                         .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
                 }
-                .padding(.horizontal, width != nil ? (width! * 0.08) : 12)
-                .padding(.bottom, height != nil ? (height! * 0.06) : 12)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
             }
             .modifier(CardFrameModifier(width: width, height: height))
             .background(Color.white.opacity(0.02))
@@ -680,6 +668,241 @@ struct CardFrameModifier: ViewModifier {
                 .frame(maxWidth: .infinity)
                 .aspectRatio(240/420, contentMode: .fit)
         }
+    }
+}
+
+// MARK: - Reusable Snapping Paging Carousel Component
+
+struct PagingCarousel<Content: View, T: Identifiable>: View {
+    let items: [T]
+    let spacing: CGFloat
+    let peekWidth: CGFloat
+    let content: (T, CGFloat) -> Content
+    
+    @Binding var currentIndex: Int
+    @State private var dragOffset: CGFloat = 0
+    
+    init(
+        items: [T],
+        spacing: CGFloat = 16,
+        peekWidth: CGFloat = 24,
+        currentIndex: Binding<Int>,
+        @ViewBuilder content: @escaping (T, CGFloat) -> Content
+    ) {
+        self.items = items
+        self.spacing = spacing
+        self.peekWidth = peekWidth
+        self._currentIndex = currentIndex
+        self.content = content
+    }
+    
+    private func getOriginalIndex(for virtualIndex: Int, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let remainder = virtualIndex % count
+        return remainder >= 0 ? remainder : remainder + count
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            // Card width is container width minus peeking on both sides and spacing
+            let cardWidth = max(50, width - (peekWidth * 2) - (spacing * 2))
+            let totalWidth = cardWidth + spacing
+            
+            if items.count > 0 {
+                let visualCenter = currentIndex + Int(round(-dragOffset / totalWidth))
+                
+                ZStack {
+                    // Render sliding window of 5 cards dynamically centered around the visual drag center
+                    ForEach((visualCenter - 2)...(visualCenter + 2), id: \.self) { virtualIndex in
+                        let originalIndex = getOriginalIndex(for: virtualIndex, count: items.count)
+                        let item = items[originalIndex]
+                        
+                        // Real-time positional offsets
+                        let xOffset = CGFloat(virtualIndex - currentIndex) * totalWidth + dragOffset
+                        
+                        // Smooth scale & opacity interpolation based on exact real-time distance
+                        let distance = xOffset / totalWidth
+                        let absDistance = min(1.0, abs(distance))
+                        let scale = 1.0 - (absDistance * 0.07)
+                        let opacity = 1.0 - (absDistance * 0.40)
+                        
+                        content(item, cardWidth)
+                            .frame(width: cardWidth)
+                            .scaleEffect(scale)
+                            .opacity(opacity)
+                            .offset(x: xOffset)
+                            .zIndex(2.0 - absDistance)
+                    }
+                }
+                .frame(width: width, height: geometry.size.height, alignment: .center)
+                .contentShape(Rectangle()) // Make the empty space interactive
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            dragOffset = value.translation.width
+                        }
+                        .onEnded { value in
+                            let threshold: CGFloat = 30
+                            let predictedDrag = value.predictedEndTranslation.width
+                            let dragTranslation = value.translation.width
+                            
+                            // Determine navigation delta using projected swipe (velocity + translation)
+                            var delta = Int(round(-predictedDrag / totalWidth))
+                            
+                            if delta == 0 {
+                                if dragTranslation < -threshold || predictedDrag < -threshold {
+                                    delta = 1
+                                } else if dragTranslation > threshold || predictedDrag > threshold {
+                                    delta = -1
+                                }
+                            }
+                            
+                            // Clamp to max 3 items to preserve context and avoid excessive skipping
+                            delta = max(-3, min(3, delta))
+                            
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                                currentIndex += delta
+                                dragOffset = 0
+                            }
+                        }
+                )
+            } else {
+                Color.clear
+            }
+        }
+    }
+}
+
+struct SwiftUIAnimatedImageView: UIViewRepresentable {
+    let uiImage: UIImage
+    
+    func makeUIView(context: Context) -> UIImageView {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        return imageView
+    }
+    
+    func updateUIView(_ uiView: UIImageView, context: Context) {
+        uiView.image = uiImage
+    }
+}
+
+// MARK: - Native High-Performance GIF Rendering View
+
+struct GIFImage: View {
+    let urlString: String
+    let fallbackText: String
+    let width: CGFloat?
+    
+    @State private var gifImage: UIImage? = nil
+    @State private var isLoading = true
+    
+    var body: some View {
+        ZStack {
+            if let image = gifImage {
+                SwiftUIAnimatedImageView(uiImage: image)
+                    .transition(.opacity.combined(with: .scale(0.98)))
+            } else if isLoading {
+                ZStack {
+                    Color.white.opacity(0.04)
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.3)))
+                }
+            } else {
+                ZStack {
+                    Color.white.opacity(0.04)
+                    VStack(spacing: 8) {
+                        Text(fallbackText)
+                            .font(.system(size: (width ?? 138) * 0.25))
+                    }
+                }
+            }
+        }
+        .onAppear {
+            loadImage()
+        }
+        .onChange(of: urlString) {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        guard let url = URL(string: urlString) else {
+            isLoading = false
+            return
+        }
+        
+        isLoading = true
+        gifImage = nil
+        
+        Task {
+            do {
+                let image = try await Task.detached(priority: .userInitiated) { () -> UIImage? in
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    return UIImage.animatedImage(withGIFData: data)
+                }.value
+                
+                withAnimation(.easeOut(duration: 0.25)) {
+                    self.gifImage = image
+                    self.isLoading = false
+                }
+            } catch {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+}
+
+// MARK: - CoreGraphics/ImageIO UIImage GIF parsing extension
+
+extension UIImage {
+    static func animatedImage(withGIFData data: Data) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let count = CGImageSourceGetCount(source)
+        
+        if count <= 1 {
+            return UIImage(data: data)
+        }
+        
+        var images = [UIImage]()
+        var duration = 0.0
+        
+        for i in 0..<count {
+            if let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) {
+                images.append(UIImage(cgImage: cgImage))
+                let delaySeconds = delayForImageAtIndex(i, source: source)
+                duration += delaySeconds
+            }
+        }
+        
+        return UIImage.animatedImage(with: images, duration: duration)
+    }
+    
+    private static func delayForImageAtIndex(_ index: Int, source: CGImageSource) -> Double {
+        var delay = 0.1
+        let cfProperties = CGImageSourceCopyPropertiesAtIndex(source, index, nil)
+        
+        if let cfProperties = cfProperties as? [String: Any],
+           let gifProperties = cfProperties[kCGImagePropertyGIFDictionary as String] as? [String: Any] {
+            
+            if let delayTime = gifProperties[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double {
+                delay = delayTime
+            } else if let delayTime = gifProperties[kCGImagePropertyGIFDelayTime as String] as? Double {
+                delay = delayTime
+            }
+        }
+        
+        if delay < 0.02 {
+            delay = 0.1
+        }
+        
+        return delay
     }
 }
 
