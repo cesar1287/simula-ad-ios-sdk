@@ -120,7 +120,7 @@ public final class APIClient {
         let menuId = payload.menuId ?? ""
         
         // Handle different structural types returned by backend
-        let gamesList = payload.catalog ?? payload.data ?? []
+        let gamesList = payload.catalog?.games ?? payload.data ?? []
         return (menuId, gamesList)
     }
     

@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 /// Thread-safe Cache Manager for storing Ad units and rendering configurations.
 /// Implemented using NSRecursiveLock for high performance and strict thread-safety across background queues.
@@ -74,16 +75,13 @@ public final class MiniGameProvider: ObservableObject {
     public private(set) var devMode: Bool = false
     public private(set) var primaryUserID: String? = nil
     public private(set) var hasPrivacyConsent: Bool = true
-    public private(set) var appDomain: String = "sdk.ios.simula"
+    public private(set) var appDomain: String = "coolaigames.com"
     
     private let cache = MiniGameCache()
     private var isConfigured: Bool = false
     
     private init() {
-        // Retrieve standard host bundle identifier as the default appDomain
-        if let bundleId = Bundle.main.bundleIdentifier {
-            self.appDomain = bundleId
-        }
+        // Default appDomain is "coolaigames.com" for Aditude configuration compatibility
     }
     
     /// Initializes the provider with publisher credentials and configures SDK behaviors.

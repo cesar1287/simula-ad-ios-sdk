@@ -107,7 +107,7 @@ public struct AditudeSlotMapping: Codable, Hashable {
     public let divId: String
     public let devices: [String]
     public let adUnitPath: String
-    public let sizes: [String: [[Int]]]?
+    public let sizes: [String: String]?
 
     enum CodingKeys: String, CodingKey {
         case divId = "div_id"
@@ -134,10 +134,49 @@ public struct AditudeConfig: Codable, Hashable {
 
 // MARK: - API Payloads
 
+struct CatalogInnerPayload: Codable {
+    let data: [GameData]?
+}
+
+enum CatalogContainer: Codable {
+    case array([GameData])
+    case object(CatalogInnerPayload)
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let array = try? container.decode([GameData].self) {
+            self = .array(array)
+        } else if let object = try? container.decode(CatalogInnerPayload.self) {
+            self = .object(object)
+        } else {
+            throw DecodingError.typeMismatch(CatalogContainer.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Expected either an array of games or a catalog object"))
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .array(let list):
+            try container.encode(list)
+        case .object(let payload):
+            try container.encode(payload)
+        }
+    }
+    
+    var games: [GameData] {
+        switch self {
+        case .array(let list):
+            return list
+        case .object(let payload):
+            return payload.data ?? []
+        }
+    }
+}
+
 /// Internal wrapper for the Catalog endpoint response.
 struct CatalogResponsePayload: Codable {
     let menuId: String?
-    let catalog: [GameData]?
+    let catalog: CatalogContainer?
     let data: [GameData]?
 
     enum CodingKeys: String, CodingKey {

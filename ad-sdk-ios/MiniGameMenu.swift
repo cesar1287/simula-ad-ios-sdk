@@ -127,7 +127,7 @@ public struct MiniGameMenu: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
                 .frame(maxWidth: sizeClass == .regular ? 640 : .infinity)
-                .frame(height: sizeClass == .regular ? 540 : 640)
+                .frame(height: sizeClass == .regular ? 640 : 640)
                 .background(
                     ZStack {
                         // Core solid background matching the original dark theme
@@ -247,7 +247,7 @@ public struct MiniGameMenu: View {
                     case .success(let image):
                         image
                             .resizable()
-                            .aspectRatio(contentMode: .cover)
+                            .aspectRatio(contentMode: .fill)
                     default:
                         // Initials Fallback matching Javascript getInitials
                         ZStack {
@@ -345,14 +345,18 @@ public struct MiniGameMenu: View {
         .padding(.horizontal, 32)
     }
     
+    private var gridGames: [GameData] {
+        Array(games.prefix(maxGamesToShow))
+    }
+    
     private var catalogContentView: some View {
         Group {
             if sizeClass == .regular {
                 // Fixed 4-column Grid layout on regular horizontal classes (e.g. iPad, landscape orientation)
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
-                        ForEach(games.prefix(maxGamesToShow)) { game in
-                            GameCard(game: game, theme: theme) {
+                        ForEach(gridGames) { game in
+                            GameCardBig(game: game, theme: theme, width: 130, height: 195, nameFontSize: 14) {
                                 selectMinigame(game)
                             }
                         }
@@ -360,22 +364,18 @@ public struct MiniGameMenu: View {
                     .padding(.vertical, 8)
                 }
             } else {
-                // Paginated Carousel layout using TabView pageStyle on compact horizontal classes
-                TabView {
-                    let chunkedGames = games.prefix(maxGamesToShow).chunked(into: 3)
-                    ForEach(0..<chunkedGames.count, id: \.self) { index in
-                        VStack(spacing: 16) {
-                            ForEach(chunkedGames[index]) { game in
-                                GameCardHorizontal(game: game, theme: theme) {
-                                    selectMinigame(game)
-                                }
+                // Horizontal list with big cards on compact width layout (e.g. iPhone)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(gridGames) { game in
+                            GameCardBig(game: game, theme: theme, width: 240, height: 420, nameFontSize: 20) {
+                                selectMinigame(game)
                             }
-                            Spacer()
                         }
-                        .padding(.vertical, 8)
                     }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 8)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .always))
             }
         }
     }
@@ -432,9 +432,17 @@ public struct MiniGameMenu: View {
                 isLoadingCatalog = false
                 return
             }
-            
             do {
-                let size = UIScreen.main.bounds.size
+                var size = CGSize(width: 375, height: 812)
+                if let windowScene = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive }) {
+                    size = windowScene.screen.bounds.size
+                } else if let windowScene = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first {
+                    size = windowScene.screen.bounds.size
+                }
                 let payload = InitMinigameRequestPayload(
                     gameType: game.id,
                     sessionId: sessionId,
@@ -539,132 +547,78 @@ public struct MiniGameMenu: View {
 
 // MARK: - Helper UI Components
 
-struct GameCard: View {
-    let game: GameData
-    let theme: MiniGameTheme
-    let action: () -> Void
-    
-    @State private var isPressed = false
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                // Game Cover / Icon
-                AsyncImage(url: URL(string: game.gifCover ?? game.iconUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .cover)
-                    default:
-                        // Emoji fallback matching React design
-                        ZStack {
-                            Color.white.opacity(0.06)
-                            Text(game.iconFallback ?? "🎮")
-                                .font(.system(size: 32))
-                        }
-                    }
-                }
-                .frame(width: 80, height: 80)
-                .cornerRadius(CGFloat(theme.iconCornerRadius ?? 16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CGFloat(theme.iconCornerRadius ?? 16))
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                )
-                
-                Text(game.name)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                
-                Text(game.description)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.5))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .frame(height: 24)
-            }
-            .padding(12)
-            .background(Color.white.opacity(isPressed ? 0.05 : 0.02))
-            .cornerRadius(20)
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(.easeOut(duration: 0.15), value: isPressed)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
+struct GameCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
-struct GameCardHorizontal: View {
+struct GameCardBig: View {
     let game: GameData
     let theme: MiniGameTheme
+    let width: CGFloat
+    let height: CGFloat
+    let nameFontSize: CGFloat
     let action: () -> Void
-    
-    @State private var isPressed = false
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 16) {
-                // Game Image
+            ZStack(alignment: .bottomLeading) {
+                // Background Cover Image spanning the entire card
                 AsyncImage(url: URL(string: game.gifCover ?? game.iconUrl)) { phase in
                     switch phase {
                     case .success(let image):
                         image
                             .resizable()
-                            .aspectRatio(contentMode: .cover)
+                            .aspectRatio(contentMode: .fill)
                     default:
                         ZStack {
-                            Color.white.opacity(0.06)
-                            Text(game.iconFallback ?? "🎮")
-                                .font(.system(size: 26))
+                            Color.white.opacity(0.04)
+                            VStack(spacing: 8) {
+                                Text(game.iconFallback ?? "🎮")
+                                    .font(.system(size: width * 0.25))
+                            }
                         }
                     }
                 }
-                .frame(width: 60, height: 60)
-                .cornerRadius(CGFloat(theme.iconCornerRadius ?? 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CGFloat(theme.iconCornerRadius ?? 14))
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .frame(width: width, height: height)
+                .clipped()
+                
+                // Bottom-aligned LinearGradient scrim for readability
+                LinearGradient(
+                    colors: [
+                        Color.clear,
+                        Color.black.opacity(0.3),
+                        Color.black.opacity(0.85)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
                 
+                // Game Name Overlay at bottom-left
                 VStack(alignment: .leading, spacing: 4) {
                     Text(game.name)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: nameFontSize, weight: .black, design: .rounded))
                         .foregroundColor(.white)
-                        .lineLimit(1)
-                    
-                    Text(game.description)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.5))
+                        .multilineTextAlignment(.leading)
                         .lineLimit(2)
+                        .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
                 }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white.opacity(0.3))
+                .padding(.horizontal, width * 0.08)
+                .padding(.bottom, height * 0.06)
             }
-            .padding(14)
-            .background(Color.white.opacity(isPressed ? 0.05 : 0.02))
-            .cornerRadius(18)
+            .frame(width: width, height: height)
+            .background(Color.white.opacity(0.02))
+            .cornerRadius(20)
             .overlay(
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
-            .scaleEffect(isPressed ? 0.98 : 1.0)
-            .animation(.easeOut(duration: 0.15), value: isPressed)
+            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
         }
-        .buttonStyle(PlainButtonStyle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
+        .buttonStyle(GameCardButtonStyle())
     }
 }
 
