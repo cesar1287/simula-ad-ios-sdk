@@ -374,36 +374,33 @@ public struct MiniGameMenu: View {
         gridGames.chunked(into: 4)
     }
     
+    private var tabletChunkedGridGames: [[GameData]] {
+        gridGames.chunked(into: 2)
+    }
+    
     private func catalogContentView(viewport: GeometryProxy) -> some View {
         Group {
             if sizeClass == .regular {
-                // Horizontal paginated grid layout on regular horizontal classes (e.g. iPad, landscape orientation)
+                // Horizontal paginated grid-carousel layout on regular horizontal classes (e.g. iPad, landscape orientation)
+                // Shows exactly 2 visible cards and 2 peeking cards on the sides, with smooth dragging/snapping
                 let ipadDialogWidth = viewport.size.width * 0.90
-                let ipadCardWidth = (ipadDialogWidth - 96) / 4
-                let ipadCardHeight = ipadCardWidth * 2.8
+                let ipadCardWidth = (ipadDialogWidth - 128) / 2
+                let ipadCardHeight = min(viewport.size.height * 0.58, ipadCardWidth * 1.6)
                 
                 VStack(spacing: 12) {
-                    TabView(selection: $currentGridPageIndex) {
-                        ForEach(0..<chunkedGridGames.count, id: \.self) { pageIndex in
-                            let pageGames = chunkedGridGames[pageIndex]
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
-                                ForEach(pageGames) { game in
-                                    GameCardBig(game: game, theme: theme, width: ipadCardWidth, height: ipadCardHeight, nameFontSize: 14) {
-                                        selectMinigame(game)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 4)
-                            .tag(pageIndex)
-                        }
-                    }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    TabletPagingCarousel(
+                        items: gridGames,
+                        theme: theme,
+                        cardHeight: ipadCardHeight,
+                        selectMinigame: { game in selectMinigame(game) },
+                        currentIndex: $currentGridPageIndex
+                    )
                     .frame(height: ipadCardHeight + 20)
                     
                     // Small premium blue page indicator indicating how many pages are left
-                    if chunkedGridGames.count > 1 {
+                    if tabletChunkedGridGames.count > 1 {
                         HStack(spacing: 8) {
-                            ForEach(0..<chunkedGridGames.count, id: \.self) { index in
+                            ForEach(0..<tabletChunkedGridGames.count, id: \.self) { index in
                                 Capsule()
                                     .fill(index == currentGridPageIndex ? Color(hex: theme.accentColor ?? "#007aff") : Color.white.opacity(0.15))
                                     .frame(width: index == currentGridPageIndex ? 18 : 6, height: 6)
@@ -763,6 +760,114 @@ struct PagingCarousel<Content: View, T: Identifiable>: View {
                             
                             withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
                                 currentIndex += delta
+                                dragOffset = 0
+                            }
+                        }
+                )
+            } else {
+                Color.clear
+            }
+        }
+    }
+}
+
+struct TabletPagingCarousel: View {
+    let items: [GameData]
+    let theme: MiniGameTheme
+    let cardHeight: CGFloat
+    let selectMinigame: (GameData) -> Void
+    
+    @Binding var currentIndex: Int
+    @State private var dragOffset: CGFloat = 0
+    
+    private let spacing: CGFloat = 16
+    private let peekWidth: CGFloat = 40
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            // Calculate cardWidth based on two visible cards, spacing, and peeking
+            let cardWidth = max(50, (width - (peekWidth * 2) - (spacing * 3)) / 2)
+            let totalPageWidth = (cardWidth * 2) + (spacing * 2) // Shift distance from page P to P+1
+            
+            let totalPages = Int(ceil(Double(items.count) / 2.0))
+            
+            if items.count > 0 {
+                ZStack {
+                    ForEach(0..<totalPages, id: \.self) { pageIndex in
+                        let xOffset = CGFloat(pageIndex - currentIndex) * totalPageWidth + dragOffset
+                        
+                        // Perform layout only for visible/peeking pages around current page to optimize performance
+                        if abs(pageIndex - currentIndex) <= 2 {
+                            let distance = xOffset / totalPageWidth
+                            let absDistance = min(1.0, abs(distance))
+                            let scale = 1.0 - (absDistance * 0.05)
+                            let opacity = 1.0 - (absDistance * 0.40)
+                            
+                            HStack(spacing: spacing) {
+                                // Left Card
+                                if pageIndex * 2 < items.count {
+                                    let game = items[pageIndex * 2]
+                                    GameCardBig(game: game, theme: theme, width: cardWidth, height: cardHeight, nameFontSize: 14) {
+                                        selectMinigame(game)
+                                    }
+                                }
+                                
+                                // Right Card
+                                if pageIndex * 2 + 1 < items.count {
+                                    let game = items[pageIndex * 2 + 1]
+                                    GameCardBig(game: game, theme: theme, width: cardWidth, height: cardHeight, nameFontSize: 14) {
+                                        selectMinigame(game)
+                                    }
+                                } else {
+                                    // Empty placeholder to maintain symmetric layout if page is incomplete
+                                    Color.clear
+                                        .frame(width: cardWidth, height: cardHeight)
+                                }
+                            }
+                            .frame(width: (cardWidth * 2) + spacing)
+                            .scaleEffect(scale)
+                            .opacity(opacity)
+                            .offset(x: xOffset)
+                        }
+                    }
+                }
+                .frame(width: width, height: geometry.size.height, alignment: .center)
+                .contentShape(Rectangle()) // Make the empty space interactive
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            // Premium rubber-banding at bounds
+                            let translation = value.translation.width
+                            if currentIndex == 0 && translation > 0 {
+                                dragOffset = translation * 0.3
+                            } else if currentIndex == totalPages - 1 && translation < 0 {
+                                dragOffset = translation * 0.3
+                            } else {
+                                dragOffset = translation
+                            }
+                        }
+                        .onEnded { value in
+                            let threshold: CGFloat = 30
+                            let predictedDrag = value.predictedEndTranslation.width
+                            let dragTranslation = value.translation.width
+                            
+                            // Determine navigation delta using projected swipe (velocity + translation)
+                            var delta = Int(round(-predictedDrag / totalPageWidth))
+                            
+                            if delta == 0 {
+                                if dragTranslation < -threshold || predictedDrag < -threshold {
+                                    delta = 1
+                                } else if dragTranslation > threshold || predictedDrag > threshold {
+                                    delta = -1
+                                }
+                            }
+                            
+                            // Clamp to max 1 page transitions to preserve smooth progression
+                            delta = max(-1, min(1, delta))
+                            
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                                currentIndex = max(0, min(totalPages - 1, currentIndex + delta))
                                 dragOffset = 0
                             }
                         }
