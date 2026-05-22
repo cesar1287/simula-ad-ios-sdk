@@ -260,8 +260,19 @@ public struct MiniGameMenu: View {
     
     private var menuHeaderView: some View {
         HStack(spacing: 16) {
-            // Overlapping Character Image and Game Icon Spot
             ZStack(alignment: .trailing) {
+                // Joystick badge overlap (drawn behind)
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [Color.pink, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 48, height: 48)
+                    
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .offset(x: 24)
+                
                 // Character Avatar
                 AsyncImage(url: URL(string: charImage)) { phase in
                     switch phase {
@@ -286,19 +297,8 @@ public struct MiniGameMenu: View {
                         .stroke(Color.white.opacity(0.12), lineWidth: 1.5)
                 )
                 .shadow(radius: 6)
-                
-                // Joystick badge overlap
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [Color.pink.opacity(0.8), Color.purple.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 24, height: 24)
-                    
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .offset(x: 8)
             }
+            .padding(.trailing, 24) // offset adjustment so the text is not overlapped
             .padding(.top, 24)
             .padding(.bottom, 16)
             
