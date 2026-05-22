@@ -73,7 +73,7 @@ struct GameWebViewRepresentable: UIViewRepresentable {
         """
         let userScript = WKUserScript(source: script, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         userContentController.addUserScript(userScript)
-        userContentController.add(context.coordinator, name: "simula")
+        userContentController.add(WeakScriptMessageHandler(context.coordinator), name: "simula")
         configuration.userContentController = userContentController
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
@@ -175,5 +175,18 @@ struct GameWebViewRepresentable: UIViewRepresentable {
             if divId.contains("medrec") { return "medrec" }
             return divId
         }
+    }
+}
+
+/// A weak script message handler to break retain cycles in WKUserContentController message handling.
+private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    private weak var delegate: WKScriptMessageHandler?
+    
+    init(_ delegate: WKScriptMessageHandler) {
+        self.delegate = delegate
+    }
+    
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        delegate?.userContentController(userContentController, didReceive: message)
     }
 }

@@ -14,9 +14,11 @@ public final class APIClient {
     
     private let baseURL = "https://simula-api-701226639755.us-central1.run.app"
     private let urlSession: URLSession
+    private let jsonDecoder = JSONDecoder()
+    private let jsonEncoder = JSONEncoder()
     
     private init() {
-        let configuration = URLSessionConfiguration.ephemeral
+        let configuration = URLSessionConfiguration.default
         // Set standard performance timeouts for Ad serving
         configuration.timeoutIntervalForRequest = 8.0
         configuration.timeoutIntervalForResource = 12.0
@@ -116,7 +118,7 @@ public final class APIClient {
             throw URLError(.badServerResponse)
         }
         
-        let payload = try JSONDecoder().decode(CatalogResponsePayload.self, from: data)
+        let payload = try jsonDecoder.decode(CatalogResponsePayload.self, from: data)
         let menuId = payload.menuId ?? ""
         
         // Handle different structural types returned by backend
@@ -134,7 +136,7 @@ public final class APIClient {
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("1", forHTTPHeaderField: "ngrok-skip-browser-warning")
-        urlRequest.httpBody = try JSONEncoder().encode(request)
+        urlRequest.httpBody = try jsonEncoder.encode(request)
         
         log("Initializing minigame \(request.gameType)", devMode: devMode)
         
@@ -144,7 +146,7 @@ public final class APIClient {
             throw URLError(.badServerResponse)
         }
         
-        return try JSONDecoder().decode(MinigameResponsePayload.self, from: data)
+        return try jsonDecoder.decode(MinigameResponsePayload.self, from: data)
     }
     
     /// Obtains standard fallback interstitial ad url.
@@ -166,7 +168,7 @@ public final class APIClient {
                 return nil
             }
             
-            if let payload = try? JSONDecoder().decode(MinigameResponsePayload.self, from: data) {
+            if let payload = try? jsonDecoder.decode(MinigameResponsePayload.self, from: data) {
                 return payload.adResponse.iframeUrl
             }
         } catch {
@@ -196,7 +198,7 @@ public final class APIClient {
             renderedFormat: renderedFormat
         )
         
-        request.httpBody = try? JSONEncoder().encode(payload)
+        request.httpBody = try? jsonEncoder.encode(payload)
         
         log("Reporting ad interstitial serveId:\(serveId), source:\(adSource), format:\(renderedFormat ?? "none")", devMode: devMode)
         
@@ -230,7 +232,7 @@ public final class APIClient {
                 return nil
             }
             
-            return try JSONDecoder().decode(AditudeConfig.self, from: data)
+            return try jsonDecoder.decode(AditudeConfig.self, from: data)
         } catch {
             log("Failed to fetch Aditude Config: \(error.localizedDescription)", devMode: devMode)
             return nil

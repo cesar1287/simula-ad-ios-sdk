@@ -384,8 +384,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "215"
             endingLineNumber = "215"
-            landmarkName = "fetchAditudeConfig(domain:devMode:)"
-            landmarkType = "7">
+            landmarkName = "APIClient"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1216,8 +1216,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "152"
             endingLineNumber = "152"
-            landmarkName = "fetchAdForMinigame(adId:sessionId:devMode:)"
-            landmarkType = "7">
+            landmarkName = "APIClient"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1744,8 +1744,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "174"
             endingLineNumber = "174"
-            landmarkName = "makeUIView(context:)"
-            landmarkType = "7">
+            landmarkName = "AdSimpleWebViewRepresentable"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1760,8 +1760,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "175"
             endingLineNumber = "175"
-            landmarkName = "makeUIView(context:)"
-            landmarkType = "7">
+            landmarkName = "AdSimpleWebViewRepresentable"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -2080,7 +2080,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "194"
             endingLineNumber = "194"
-            landmarkName = "updateUIView(_:context:)"
+            landmarkName = "makeUIView(context:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
