@@ -380,7 +380,7 @@ public struct MiniGameMenu: View {
                 // Horizontal paginated grid layout on regular horizontal classes (e.g. iPad, landscape orientation)
                 let ipadDialogWidth = viewport.size.width * 0.90
                 let ipadCardWidth = (ipadDialogWidth - 96) / 4
-                let ipadCardHeight = ipadCardWidth * 1.75
+                let ipadCardHeight = ipadCardWidth * 2.8
                 
                 VStack(spacing: 12) {
                     TabView(selection: $currentGridPageIndex) {
