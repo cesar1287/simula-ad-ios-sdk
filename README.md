@@ -25,7 +25,7 @@ The SDK follows an isolated, single-responsibility layered model:
 
 ```mermaid
 graph TD
-    subgraph UI Layer (Main Thread)
+    subgraph UI ["UI Layer (Main Thread)"]
         Menu[MiniGameMenu SwiftUI]
         CarouselView[Horizontal Poster View]
         GridView[Paginated 4-Column Grid]
@@ -33,12 +33,12 @@ graph TD
         AdWeb[Ad WebView & Vector Timer]
     end
 
-    subgraph State & Logic Layer (MainActor / Lock-Safe)
+    subgraph State ["State & Logic Layer (MainActor / Lock-Safe)"]
         Provider[MiniGameProvider Observable]
         Cache[MiniGameCache NSRecursiveLock]
     end
 
-    subgraph Network Layer (Background Thread)
+    subgraph Network ["Network Layer (Background Thread)"]
         API[APIClient URLSession async/await]
     end
 
