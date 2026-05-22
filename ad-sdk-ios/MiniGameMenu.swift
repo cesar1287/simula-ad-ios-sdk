@@ -272,8 +272,9 @@ public struct MiniGameMenu: View {
                         .foregroundColor(.white)
                 }
                 .offset(x: 24)
+                .zIndex(0) // Explicitly set behind
                 
-                // Character Avatar
+                // Character Avatar (drawn in front)
                 AsyncImage(url: URL(string: charImage)) { phase in
                     switch phase {
                     case .success(let image):
@@ -283,7 +284,7 @@ public struct MiniGameMenu: View {
                     default:
                         // Initials Fallback matching Javascript getInitials
                         ZStack {
-                            Color.white.opacity(0.08)
+                            Color(hex: theme.backgroundColor ?? "#0b0b0f")
                             Text(getInitials(name: charName))
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
@@ -291,12 +292,14 @@ public struct MiniGameMenu: View {
                     }
                 }
                 .frame(width: 48, height: 48)
-                .cornerRadius(16)
+                .background(Color(hex: theme.backgroundColor ?? "#0b0b0f")) // Solid opaque background
+                .clipShape(RoundedRectangle(cornerRadius: 16)) // Ensure opaque clipping
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.white.opacity(0.12), lineWidth: 1.5)
                 )
                 .shadow(radius: 6)
+                .zIndex(1) // Explicitly set in front
             }
             .padding(.trailing, 24) // offset adjustment so the text is not overlapped
             .padding(.top, 24)
