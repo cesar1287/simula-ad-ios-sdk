@@ -46,6 +46,7 @@ public struct MiniGameMenu: View {
     @State private var menuId: String? = nil
     @State private var isLoadingCatalog: Bool = false
     @State private var catalogError: Bool = false
+    @State private var currentGridPageIndex = 0
     
     // Dynamic Game & Interstitial Ad tracking
     @State private var selectedGame: GameData? = nil
@@ -172,7 +173,15 @@ public struct MiniGameMenu: View {
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isOpen)
         // MARK: - Game View Overlay Sheet
-        .fullScreenCover(isPresented: $isGameActive) {
+        .fullScreenCover(isPresented: Binding(
+            get: { isGameActive && activeGameUrl != nil },
+            set: { newValue in
+                isGameActive = newValue
+                if !newValue {
+                    activeGameUrl = nil
+                }
+            }
+        )) {
             if let gameUrl = activeGameUrl {
                 ZStack {
                     Color.black.ignoresSafeArea()
@@ -218,7 +227,15 @@ public struct MiniGameMenu: View {
             }
         }
         // MARK: - Fallback Ad Overlay Sheet
-        .fullScreenCover(isPresented: $isAdActive) {
+        .fullScreenCover(isPresented: Binding(
+            get: { isAdActive && activeAdUrl != nil },
+            set: { newValue in
+                isAdActive = newValue
+                if !newValue {
+                    activeAdUrl = nil
+                }
+            }
+        )) {
             if let adUrl = activeAdUrl {
                 AdWebView(
                     adUrl: adUrl,
@@ -349,19 +366,45 @@ public struct MiniGameMenu: View {
         Array(games.prefix(maxGamesToShow))
     }
     
+    private var chunkedGridGames: [[GameData]] {
+        gridGames.chunked(into: 4)
+    }
+    
     private var catalogContentView: some View {
         Group {
             if sizeClass == .regular {
-                // Fixed 4-column Grid layout on regular horizontal classes (e.g. iPad, landscape orientation)
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
-                        ForEach(gridGames) { game in
-                            GameCardBig(game: game, theme: theme, width: 130, height: 195, nameFontSize: 14) {
-                                selectMinigame(game)
+                // Horizontal paginated grid layout on regular horizontal classes (e.g. iPad, landscape orientation)
+                VStack(spacing: 12) {
+                    TabView(selection: $currentGridPageIndex) {
+                        ForEach(0..<chunkedGridGames.count, id: \.self) { pageIndex in
+                            let pageGames = chunkedGridGames[pageIndex]
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
+                                ForEach(pageGames) { game in
+                                    GameCardBig(game: game, theme: theme, width: nil, height: nil, nameFontSize: 14) {
+                                        selectMinigame(game)
+                                    }
+                                }
                             }
+                            .padding(.horizontal, 4)
+                            .tag(pageIndex)
                         }
                     }
-                    .padding(.vertical, 8)
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(height: 260)
+                    
+                    // Small premium blue page indicator indicating how many pages are left
+                    if chunkedGridGames.count > 1 {
+                        HStack(spacing: 8) {
+                            ForEach(0..<chunkedGridGames.count, id: \.self) { index in
+                                Capsule()
+                                    .fill(index == currentGridPageIndex ? Color(hex: theme.accentColor ?? "#007aff") : Color.white.opacity(0.15))
+                                    .frame(width: index == currentGridPageIndex ? 18 : 6, height: 6)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentGridPageIndex)
+                            }
+                        }
+                        .padding(.top, 4)
+                        .padding(.bottom, 8)
+                    }
                 }
             } else {
                 // Horizontal list with big cards on compact width layout (e.g. iPhone)
@@ -387,12 +430,13 @@ public struct MiniGameMenu: View {
         let initials = parts.compactMap { $0.first }
         return String(initials.prefix(2)).uppercased()
     }
-    
+    @MainActor
     private func loadMinigamesCatalog() {
         guard !isLoadingCatalog else { return }
         
         isLoadingCatalog = true
         catalogError = false
+        currentGridPageIndex = 0
         
         Task {
             do {
@@ -406,7 +450,7 @@ public struct MiniGameMenu: View {
             }
         }
     }
-    
+    @MainActor
     private func selectMinigame(_ game: GameData) {
         // Track game click tracking
         if let menuId = menuId {
@@ -478,6 +522,7 @@ public struct MiniGameMenu: View {
         }
     }
     
+    @MainActor
     private func closeActiveGameFlow() {
         isGameActive = false
         
@@ -515,7 +560,7 @@ public struct MiniGameMenu: View {
             selectedGame = nil
         }
     }
-    
+    @MainActor
     private func checkAditudeFallback() {
         if provider.aditudeReady, let _ = provider.aditudeConfig {
             self.isAditudeAd = true
@@ -558,8 +603,8 @@ struct GameCardButtonStyle: ButtonStyle {
 struct GameCardBig: View {
     let game: GameData
     let theme: MiniGameTheme
-    let width: CGFloat
-    let height: CGFloat
+    let width: CGFloat?
+    let height: CGFloat?
     let nameFontSize: CGFloat
     let action: () -> Void
     
@@ -578,12 +623,12 @@ struct GameCardBig: View {
                             Color.white.opacity(0.04)
                             VStack(spacing: 8) {
                                 Text(game.iconFallback ?? "🎮")
-                                    .font(.system(size: width * 0.25))
+                                    .font(.system(size: (width ?? 138) * 0.25))
                             }
                         }
                     }
                 }
-                .frame(width: width, height: height)
+                .modifier(CardFrameModifier(width: width, height: height))
                 .clipped()
                 
                 // Bottom-aligned LinearGradient scrim for readability
@@ -606,10 +651,10 @@ struct GameCardBig: View {
                         .lineLimit(2)
                         .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
                 }
-                .padding(.horizontal, width * 0.08)
-                .padding(.bottom, height * 0.06)
+                .padding(.horizontal, width != nil ? (width! * 0.08) : 12)
+                .padding(.bottom, height != nil ? (height! * 0.06) : 12)
             }
-            .frame(width: width, height: height)
+            .modifier(CardFrameModifier(width: width, height: height))
             .background(Color.white.opacity(0.02))
             .cornerRadius(20)
             .overlay(
@@ -619,6 +664,22 @@ struct GameCardBig: View {
             .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(GameCardButtonStyle())
+    }
+}
+
+struct CardFrameModifier: ViewModifier {
+    let width: CGFloat?
+    let height: CGFloat?
+    
+    func body(content: Content) -> some View {
+        if let w = width, let h = height {
+            content
+                .frame(width: w, height: h)
+        } else {
+            content
+                .frame(maxWidth: .infinity)
+                .aspectRatio(240/420, contentMode: .fit)
+        }
     }
 }
 

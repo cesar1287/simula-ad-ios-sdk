@@ -40,8 +40,8 @@ public struct AdWebView: View {
             Color.black.opacity(0.85)
                 .ignoresSafeArea()
             
-            VStack(spacing: 12) {
-                if isAditude {
+            if isAditude {
+                VStack(spacing: 12) {
                     Text("SPONSORED AD")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundColor(.white.opacity(0.5))
@@ -62,18 +62,20 @@ public struct AdWebView: View {
                         }
                     }
                     .frame(width: 300, height: 250)
-                } else {
-                    // Full-screen programmatic frame
-                    ZStack {
-                        AdSimpleWebViewRepresentable(url: adUrl)
+                }
+            } else {
+                // Full-screen programmatic frame
+                ZStack {
+                    AdSimpleWebViewRepresentable(url: adUrl)
+                        .ignoresSafeArea()
+                    
+                    if circleProgress > 0 {
+                        Color.black.opacity(0.01)
                             .ignoresSafeArea()
-                        
-                        if circleProgress > 0 {
-                            Color.black.opacity(0.01)
-                                .ignoresSafeArea()
-                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
             }
             
             // Top Right Controls Area
@@ -175,9 +177,9 @@ struct AdSimpleWebViewRepresentable: UIViewRepresentable {
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.backgroundColor = .clear
-        webView.isOpaque = false
-        webView.scrollView.backgroundColor = .clear
+        webView.backgroundColor = .white
+        webView.isOpaque = true
+        webView.scrollView.backgroundColor = .white
         webView.scrollView.isScrollEnabled = false // Interstitial frames are display-only
         
         if let targetUrl = URL(string: url) {
