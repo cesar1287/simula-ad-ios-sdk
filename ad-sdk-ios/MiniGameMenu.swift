@@ -385,7 +385,7 @@ public struct MiniGameMenu: View {
                 // Shows exactly 2 visible cards and 2 peeking cards on the sides, with smooth dragging/snapping
                 let ipadDialogWidth = viewport.size.width * 0.90
                 let ipadCardWidth = (ipadDialogWidth - 128) / 2
-                let ipadCardHeight = min(viewport.size.height * 0.58, ipadCardWidth * 1.6)
+                let ipadCardHeight = min(viewport.size.height * 0.73, ipadCardWidth * 1.95)
                 
                 VStack(spacing: 12) {
                     TabletPagingCarousel(
@@ -401,9 +401,10 @@ public struct MiniGameMenu: View {
                     if tabletChunkedGridGames.count > 1 {
                         HStack(spacing: 8) {
                             ForEach(0..<tabletChunkedGridGames.count, id: \.self) { index in
+                                let isSelected = index == getOriginalPageIndex(for: currentGridPageIndex, count: tabletChunkedGridGames.count)
                                 Capsule()
-                                    .fill(index == currentGridPageIndex ? Color(hex: theme.accentColor ?? "#007aff") : Color.white.opacity(0.15))
-                                    .frame(width: index == currentGridPageIndex ? 18 : 6, height: 6)
+                                    .fill(isSelected ? Color(hex: theme.accentColor ?? "#007aff") : Color.white.opacity(0.15))
+                                    .frame(width: isSelected ? 18 : 6, height: 6)
                                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentGridPageIndex)
                             }
                         }
@@ -424,6 +425,12 @@ public struct MiniGameMenu: View {
     }
     
     // MARK: - Logic Orchestration
+    
+    private func getOriginalPageIndex(for virtualIndex: Int, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let remainder = virtualIndex % count
+        return remainder >= 0 ? remainder : remainder + count
+    }
     
     private func getInitials(name: String) -> String {
         let parts = name.components(separatedBy: " ")
@@ -783,6 +790,21 @@ struct TabletPagingCarousel: View {
     private let spacing: CGFloat = 16
     private let peekWidth: CGFloat = 40
     
+    private var paddedItems: [GameData] {
+        if items.isEmpty { return [] }
+        if items.count % 2 == 0 {
+            return items
+        } else {
+            return items + [items[0]]
+        }
+    }
+    
+    private func getOriginalPageIndex(for virtualIndex: Int, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let remainder = virtualIndex % count
+        return remainder >= 0 ? remainder : remainder + count
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
@@ -790,46 +812,42 @@ struct TabletPagingCarousel: View {
             let cardWidth = max(50, (width - (peekWidth * 2) - (spacing * 3)) / 2)
             let totalPageWidth = (cardWidth * 2) + (spacing * 2) // Shift distance from page P to P+1
             
-            let totalPages = Int(ceil(Double(items.count) / 2.0))
+            let totalPages = paddedItems.count / 2
             
-            if items.count > 0 {
+            if !paddedItems.isEmpty {
+                let visualCenter = currentIndex + Int(round(-dragOffset / totalPageWidth))
+                
                 ZStack {
-                    ForEach(0..<totalPages, id: \.self) { pageIndex in
-                        let xOffset = CGFloat(pageIndex - currentIndex) * totalPageWidth + dragOffset
+                    ForEach((visualCenter - 2)...(visualCenter + 2), id: \.self) { virtualPageIndex in
+                        let realPageIndex = getOriginalPageIndex(for: virtualPageIndex, count: totalPages)
+                        let xOffset = CGFloat(virtualPageIndex - currentIndex) * totalPageWidth + dragOffset
                         
-                        // Perform layout only for visible/peeking pages around current page to optimize performance
-                        if abs(pageIndex - currentIndex) <= 2 {
-                            let distance = xOffset / totalPageWidth
-                            let absDistance = min(1.0, abs(distance))
-                            let scale = 1.0 - (absDistance * 0.05)
-                            let opacity = 1.0 - (absDistance * 0.40)
-                            
-                            HStack(spacing: spacing) {
-                                // Left Card
-                                if pageIndex * 2 < items.count {
-                                    let game = items[pageIndex * 2]
-                                    GameCardBig(game: game, theme: theme, width: cardWidth, height: cardHeight, nameFontSize: 14) {
-                                        selectMinigame(game)
-                                    }
-                                }
-                                
-                                // Right Card
-                                if pageIndex * 2 + 1 < items.count {
-                                    let game = items[pageIndex * 2 + 1]
-                                    GameCardBig(game: game, theme: theme, width: cardWidth, height: cardHeight, nameFontSize: 14) {
-                                        selectMinigame(game)
-                                    }
-                                } else {
-                                    // Empty placeholder to maintain symmetric layout if page is incomplete
-                                    Color.clear
-                                        .frame(width: cardWidth, height: cardHeight)
+                        let distance = xOffset / totalPageWidth
+                        let absDistance = min(1.0, abs(distance))
+                        let scale = 1.0 - (absDistance * 0.05)
+                        let opacity = 1.0 - (absDistance * 0.40)
+                        
+                        HStack(spacing: spacing) {
+                            // Left Card
+                            if realPageIndex * 2 < paddedItems.count {
+                                let game = paddedItems[realPageIndex * 2]
+                                GameCardBig(game: game, theme: theme, width: cardWidth, height: cardHeight, nameFontSize: 14) {
+                                    selectMinigame(game)
                                 }
                             }
-                            .frame(width: (cardWidth * 2) + spacing)
-                            .scaleEffect(scale)
-                            .opacity(opacity)
-                            .offset(x: xOffset)
+                            
+                            // Right Card
+                            if realPageIndex * 2 + 1 < paddedItems.count {
+                                let game = paddedItems[realPageIndex * 2 + 1]
+                                GameCardBig(game: game, theme: theme, width: cardWidth, height: cardHeight, nameFontSize: 14) {
+                                    selectMinigame(game)
+                                }
+                            }
                         }
+                        .frame(width: (cardWidth * 2) + spacing)
+                        .scaleEffect(scale)
+                        .opacity(opacity)
+                        .offset(x: xOffset)
                     }
                 }
                 .frame(width: width, height: geometry.size.height, alignment: .center)
@@ -837,15 +855,7 @@ struct TabletPagingCarousel: View {
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            // Premium rubber-banding at bounds
-                            let translation = value.translation.width
-                            if currentIndex == 0 && translation > 0 {
-                                dragOffset = translation * 0.3
-                            } else if currentIndex == totalPages - 1 && translation < 0 {
-                                dragOffset = translation * 0.3
-                            } else {
-                                dragOffset = translation
-                            }
+                            dragOffset = value.translation.width
                         }
                         .onEnded { value in
                             let threshold: CGFloat = 30
@@ -867,7 +877,7 @@ struct TabletPagingCarousel: View {
                             delta = max(-1, min(1, delta))
                             
                             withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
-                                currentIndex = max(0, min(totalPages - 1, currentIndex + delta))
+                                currentIndex += delta
                                 dragOffset = 0
                             }
                         }
