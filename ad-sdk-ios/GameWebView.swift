@@ -78,7 +78,7 @@ public struct GameWebView: View {
                     )
                     .shadow(color: Color.black.opacity(0.4), radius: 15, x: 0, y: 10)
                 }
-                .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+                .transition(AnyTransition.opacity.animation(.easeInOut(duration: 0.3)))
             }
         }
     }

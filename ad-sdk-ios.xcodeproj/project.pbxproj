@@ -48,7 +48,7 @@
 		};
 		3C1DA0122FC0542400685095 /* SampleApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "SampleApp";
+			path = SampleApp;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */

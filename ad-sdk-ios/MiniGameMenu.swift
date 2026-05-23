@@ -7,6 +7,8 @@
 
 import SwiftUI
 import ImageIO
+import SafariServices
+import StoreKit
 
 /// The master SwiftUI View for displaying the MiniGame catalog overlay.
 /// Features a responsive layout that automatically adapts to trait-collections:
@@ -37,6 +39,8 @@ public struct MiniGameMenu: View {
     // Publisher events callbacks
     public var onGameOpen: ((String, String) -> Void)? = nil
     public var onGameClose: ((String) -> Void)? = nil
+    public var onImpression: ((String) -> Void)? = nil
+    public var onDestinationOpen: ((String, String) -> Void)? = nil
     
     // MARK: - Internal States
     
@@ -77,7 +81,9 @@ public struct MiniGameMenu: View {
         showBanner: Bool = true,
         navigationType: String = "dot",
         onGameOpen: ((String, String) -> Void)? = nil,
-        onGameClose: ((String) -> Void)? = nil
+        onGameClose: ((String) -> Void)? = nil,
+        onImpression: ((String) -> Void)? = nil,
+        onDestinationOpen: ((String, String) -> Void)? = nil
     ) {
         self._isOpen = isOpen
         self.charName = charName
@@ -94,6 +100,8 @@ public struct MiniGameMenu: View {
         self.navigationType = navigationType
         self.onGameOpen = onGameOpen
         self.onGameClose = onGameClose
+        self.onImpression = onImpression
+        self.onDestinationOpen = onDestinationOpen
     }
     
     // MARK: - Body Layout
@@ -108,7 +116,7 @@ public struct MiniGameMenu: View {
                         .onTapGesture {
                             isOpen = false
                         }
-                        .transition(.opacity)
+                        .transition(AnyTransition.opacity)
                     
                     // Visual Shell Container
                     VStack(spacing: 0) {
@@ -164,9 +172,9 @@ public struct MiniGameMenu: View {
                     )
                     .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
                     .padding(.horizontal, sizeClass == .regular ? 0 : 16)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .bottom).combined(with: .opacity),
-                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    .transition(AnyTransition.asymmetric(
+                        insertion: AnyTransition.move(edge: .bottom).combined(with: AnyTransition.opacity),
+                        removal: AnyTransition.move(edge: .bottom).combined(with: AnyTransition.opacity)
                     ))
                     .onAppear {
                         loadMinigamesCatalog()
@@ -454,6 +462,7 @@ public struct MiniGameMenu: View {
                 self.games = catalog.games
                 self.menuId = catalog.menuId
                 isLoadingCatalog = false
+                onImpression?(catalog.menuId)
             } catch {
                 catalogError = true
                 isLoadingCatalog = false
@@ -462,6 +471,41 @@ public struct MiniGameMenu: View {
     }
     @MainActor
     private func selectMinigame(_ game: GameData) {
+        // Intercept destination mappings (from JSON or hardcoded testing keys)
+        let isAppStoreDest = game.destinationType == "app" || game.id == "boop_the_snoot"
+        let isWebViewDest = game.destinationType == "web" || game.destinationType == "url" || game.id == "blackjack"
+        
+        if isAppStoreDest || isWebViewDest {
+            if let menuId = menuId {
+                Task {
+                    await APIClient.shared.trackMenuGameClick(
+                        menuId: menuId,
+                        gameName: game.name,
+                        apiKey: provider.apiKey,
+                        devMode: provider.devMode
+                    )
+                }
+            }
+            
+            let targetValue = game.destinationTarget ?? (isAppStoreDest ? "831515428" : "https://apple.com")
+            let destType = isAppStoreDest ? "app" : "web"
+            
+            onDestinationOpen?(destType, targetValue)
+            
+            if let rootVC = AdDestinationPresenter.shared.getRootViewController() {
+                if isAppStoreDest {
+                    AdDestinationPresenter.shared.presentAppStore(appId: targetValue, from: rootVC) {
+                        // Dismiss returns to game menu
+                    }
+                } else if let url = URL(string: targetValue) {
+                    AdDestinationPresenter.shared.presentWebView(url: url, from: rootVC) {
+                        // Dismiss returns to game menu
+                    }
+                }
+            }
+            return
+        }
+
         // Track game click tracking
         if let menuId = menuId {
             Task {
@@ -923,7 +967,7 @@ struct GIFImage: View {
         ZStack {
             if let image = gifImage {
                 SwiftUIAnimatedImageView(uiImage: image)
-                    .transition(.opacity.combined(with: .scale(0.98)))
+                    .transition(AnyTransition.opacity.combined(with: AnyTransition.scale(scale: 0.98)))
             } else if isLoading {
                 ZStack {
                     Color.white.opacity(0.04)
@@ -943,7 +987,7 @@ struct GIFImage: View {
         .onAppear {
             loadImage()
         }
-        .onChange(of: urlString) {
+        .onValueChange(of: urlString) {
             loadImage()
         }
     }
@@ -1056,10 +1100,97 @@ extension Color {
     }
 }
 
+@MainActor
+public class AdDestinationPresenter: NSObject, SKStoreProductViewControllerDelegate, SFSafariViewControllerDelegate {
+    public static let shared = AdDestinationPresenter()
+    
+    private var onDismissCallback: (() -> Void)?
+    
+    public func getRootViewController() -> UIViewController? {
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) ??
+            UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first,
+              let rootVC = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+            return nil
+        }
+        
+        var topVC = rootVC
+        while let presentedVC = topVC.presentedViewController {
+            topVC = presentedVC
+        }
+        return topVC
+    }
+    
+    public func presentAppStore(appId: String, from viewController: UIViewController, onDismiss: @escaping () -> Void) {
+        self.onDismissCallback = onDismiss
+        
+        let storeViewController = SKStoreProductViewController()
+        storeViewController.delegate = self
+        
+        let parameters = [SKStoreProductParameterITunesItemIdentifier: appId]
+        
+        storeViewController.loadProduct(withParameters: parameters) { [weak viewController, weak self] (success, error) in
+            if success {
+                viewController?.present(storeViewController, animated: true, completion: nil)
+            } else {
+                print("[Simula SDK] Failed to load App Store product: \(error?.localizedDescription ?? "unknown error"). Falling back to Safari web presentation.")
+                if let vc = viewController, let url = URL(string: "https://apps.apple.com/app/id\(appId)") {
+                    let safariViewController = SFSafariViewController(url: url)
+                    safariViewController.delegate = self
+                    vc.present(safariViewController, animated: true, completion: nil)
+                } else {
+                    onDismiss()
+                }
+            }
+        }
+    }
+    
+    public func presentWebView(url: URL, from viewController: UIViewController, onDismiss: @escaping () -> Void) {
+        self.onDismissCallback = onDismiss
+        
+        let safariViewController = SFSafariViewController(url: url)
+        safariViewController.delegate = self
+        
+        viewController.present(safariViewController, animated: true, completion: nil)
+    }
+    
+    // MARK: - SKStoreProductViewControllerDelegate
+    public func productViewControllerDidFinish(_ viewController: SKStoreProductViewController) {
+        viewController.dismiss(animated: true) { [weak self] in
+            self?.onDismissCallback?()
+            self?.onDismissCallback = nil
+        }
+    }
+    
+    // MARK: - SFSafariViewControllerDelegate
+    public func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+        onDismissCallback?()
+        onDismissCallback = nil
+    }
+}
+
 extension Array {
     func chunked(into size: Int) -> [[Element]] {
         return stride(from: 0, to: count, by: size).map {
             Array(self[$0..<Swift.min($0 + size, count)])
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func onValueChange<T: Equatable>(of value: T, perform action: @escaping () -> Void) -> some View {
+        if #available(iOS 17.0, *) {
+            self.onChange(of: value) { oldValue, newValue in
+                action()
+            }
+        } else {
+            self.onChange(of: value) { newValue in
+                action()
+            }
         }
     }
 }

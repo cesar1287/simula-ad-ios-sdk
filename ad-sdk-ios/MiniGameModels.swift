@@ -26,6 +26,8 @@ public struct GameData: Codable, Identifiable, Hashable {
     public let description: String
     public let iconFallback: String?
     public let gifCover: String?
+    public let destinationType: String?
+    public let destinationTarget: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -34,15 +36,19 @@ public struct GameData: Codable, Identifiable, Hashable {
         case description
         case iconFallback
         case gifCover = "gif_cover"
+        case destinationType = "destination_type"
+        case destinationTarget = "destination_target"
     }
 
-    public init(id: String, name: String, iconUrl: String, description: String, iconFallback: String? = nil, gifCover: String? = nil) {
+    public init(id: String, name: String, iconUrl: String, description: String, iconFallback: String? = nil, gifCover: String? = nil, destinationType: String? = nil, destinationTarget: String? = nil) {
         self.id = id
         self.name = name
         self.iconUrl = iconUrl
         self.description = description
         self.iconFallback = iconFallback
         self.gifCover = gifCover
+        self.destinationType = destinationType
+        self.destinationTarget = destinationTarget
     }
 }
 

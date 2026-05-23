@@ -1,0 +1,23 @@
+{
+  "name": "simula-ad-sdk",
+  "version": "1.0.0",
+  "description": "Simula Ad SDK React Native Bridge wrapping native iOS Swift SDK",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "keywords": [
+    "react-native",
+    "ios",
+    "simula",
+    "ad-sdk",
+    "minigames"
+  ],
+  "author": "Simula Team",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

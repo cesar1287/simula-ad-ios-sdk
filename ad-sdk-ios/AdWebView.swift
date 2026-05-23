@@ -129,7 +129,7 @@ public struct AdWebView: View {
                                 )
                                 .shadow(color: .black.opacity(0.3), radius: 4)
                         }
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(AnyTransition.scale.combined(with: AnyTransition.opacity))
                         .padding(.trailing, 20)
                         .padding(.top, 20)
                     }
