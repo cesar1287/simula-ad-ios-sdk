@@ -487,7 +487,7 @@ public struct MiniGameMenu: View {
                 }
             }
             
-            let targetValue = game.destinationTarget ?? (isAppStoreDest ? "831515428" : "https://apple.com")
+            let targetValue = game.destinationTarget ?? (isAppStoreDest ? "431174690" : "https://apple.com")
             let destType = isAppStoreDest ? "app" : "web"
             
             onDestinationOpen?(destType, targetValue)
@@ -761,10 +761,10 @@ struct PagingCarousel<Content: View, T: Identifiable>: View {
             let totalWidth = cardWidth + spacing
             
             if items.count > 0 {
-                let visualCenter = currentIndex + Int(round(-dragOffset / totalWidth))
+                let visualCenter = currentIndex
                 
                 ZStack {
-                    // Render sliding window of 5 cards dynamically centered around the visual drag center
+                    // Render sliding window of 5 cards dynamically centered around the current index
                     ForEach((visualCenter - 2)...(visualCenter + 2), id: \.self) { virtualIndex in
                         let originalIndex = getOriginalIndex(for: virtualIndex, count: items.count)
                         let item = items[originalIndex]
@@ -862,7 +862,7 @@ struct TabletPagingCarousel: View {
             let totalPages = paddedItems.count / 2
             
             if !paddedItems.isEmpty {
-                let visualCenter = currentIndex + Int(round(-dragOffset / totalPageWidth))
+                let visualCenter = currentIndex
                 
                 ZStack {
                     ForEach((visualCenter - 2)...(visualCenter + 2), id: \.self) { virtualPageIndex in
@@ -1130,19 +1130,12 @@ public class AdDestinationPresenter: NSObject, SKStoreProductViewControllerDeleg
         let storeViewController = SKStoreProductViewController()
         storeViewController.delegate = self
         
-        let parameters = [SKStoreProductParameterITunesItemIdentifier: appId]
-        
-        storeViewController.loadProduct(withParameters: parameters) { [weak viewController, weak self] (success, error) in
-            if success {
-                viewController?.present(storeViewController, animated: true, completion: nil)
-            } else {
-                print("[Simula SDK] Failed to load App Store product: \(error?.localizedDescription ?? "unknown error"). Falling back to Safari web presentation.")
-                if let vc = viewController, let url = URL(string: "https://apps.apple.com/app/id\(appId)") {
-                    let safariViewController = SFSafariViewController(url: url)
-                    safariViewController.delegate = self
-                    vc.present(safariViewController, animated: true, completion: nil)
-                } else {
-                    onDismiss()
+        // Present immediately so the user sees the native App Store sheet instantly
+        viewController.present(storeViewController, animated: true) {
+            let parameters = [SKStoreProductParameterITunesItemIdentifier: appId]
+            storeViewController.loadProduct(withParameters: parameters) { (success, error) in
+                if !success {
+                    print("[Simula SDK] Failed to load App Store product details: \(error?.localizedDescription ?? "unknown error"). User can still dismiss manually via Close button.")
                 }
             }
         }
