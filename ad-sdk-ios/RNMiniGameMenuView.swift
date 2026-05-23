@@ -211,4 +211,11 @@ public class RNMiniGameMenuView: UIView {
             self.hostingController = nil
         }
     }
+    
+    deinit {
+        let hc = self.hostingController
+        DispatchQueue.main.async {
+            hc?.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
+    }
 }

@@ -225,6 +225,9 @@ To fulfill strict production SDK mandates, the library strictly guards system re
    }
    ```
 3. **Optimized Render Cycles:** Image rendering uses standard lazy asynchronous blocks (`AsyncImage`) caching remote media, avoiding catalog rendering lag.
+4. **React Native Bridge Touch Resolution:** Bypasses React Native's standard `RCTTouchHandler` filters by presenting the catalog menu and game webviews modally (`.overFullScreen`) from a native UIKit window scene. This ensures 100% responsive snap carousel dragging and webview click actions with zero gesture freezes.
+5. **Bridge `deinit` Unmount Safeguard:** Implements an explicit `deinit` destructor inside the native view manager. If a publisher abruptly unmounts the JS component (e.g., `{isOpen && <MiniGameMenu />}`), the Swift runtime automatically triggers view-controller dismissal on the main actor, preventing visual overlays from dangling or leaking memory.
+6. **Zero-Overhead JS Mounting:** The React Native TypeScript layer returns a `null` render state immediately when `isOpen` is `false`. This avoids mounting, sizing, or maintaining inactive native component overlay views in the RN flexbox layout tree.
 
 ---
 

@@ -19,6 +19,7 @@ public struct AdWebView: View {
     @State private var timeRemaining: Int = 5
     @State private var circleProgress: CGFloat = 1.0
     @State private var timerActive = true
+    @State private var isTimerStarted = false
     
     public init(
         adUrl: String,
@@ -143,6 +144,9 @@ public struct AdWebView: View {
     }
     
     private func bootTimer() {
+        guard !isTimerStarted else { return }
+        isTimerStarted = true
+        
         // 1. Smoothly animate the circle ring progress from 1.0 to 0.0 over 5.0 seconds
         withAnimation(.linear(duration: 5.0)) {
             circleProgress = 0.0
