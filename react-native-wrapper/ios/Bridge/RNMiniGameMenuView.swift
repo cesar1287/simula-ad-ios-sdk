@@ -103,13 +103,24 @@ public class RNMiniGameMenuView: UIView {
         self.backgroundColor = .clear
     }
     
+    private var updateScheduled = false
+    
     private func updateView() {
+        guard !updateScheduled else { return }
+        updateScheduled = true
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.updateScheduled = false
+            self.performUpdateView()
+        }
+    }
+    
+    private func performUpdateView() {
         // Guard to ensure we have required fields before attempting to present anything
         guard isOpen, !charName.isEmpty, !charID.isEmpty else {
             if !isOpen && !isGameScreenActive {
-                DispatchQueue.main.async {
-                    self.dismissMenuModal()
-                }
+                self.dismissMenuModal()
             }
             return
         }
@@ -184,9 +195,7 @@ public class RNMiniGameMenuView: UIView {
             }
         )
         
-        DispatchQueue.main.async {
-            self.presentMenuModal(with: menuWrapper)
-        }
+        self.presentMenuModal(with: menuWrapper)
     }
     
     private func presentMenuModal(with wrapperView: RNMiniGameMenuWrapper) {

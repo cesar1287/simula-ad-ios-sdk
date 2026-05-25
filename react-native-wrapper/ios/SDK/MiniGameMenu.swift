@@ -953,6 +953,28 @@ struct SwiftUIAnimatedImageView: UIViewRepresentable {
     }
 }
 
+/// High-performance, memory-bounded, thread-safe cache manager for downloaded and decoded images/GIFs.
+public final class MiniGameImageCache {
+    public static let shared = MiniGameImageCache()
+    private let cache = NSCache<NSString, UIImage>()
+    private let lock = NSRecursiveLock()
+    
+    private init() {
+        cache.countLimit = 40 // Retain max 40 game cards/gifs in memory
+        cache.totalCostLimit = 100 * 1024 * 1024 // Bound memory to 100MB max
+    }
+    
+    public func get(forKey key: String) -> UIImage? {
+        lock.lock(); defer { lock.unlock() }
+        return cache.object(forKey: key as NSString)
+    }
+    
+    public func set(_ image: UIImage, forKey key: String, cost: Int = 0) {
+        lock.lock(); defer { lock.unlock() }
+        cache.setObject(image, forKey: key as NSString, cost: cost)
+    }
+}
+
 // MARK: - Native High-Performance GIF Rendering View
 
 struct GIFImage: View {
@@ -993,6 +1015,12 @@ struct GIFImage: View {
     }
     
     private func loadImage() {
+        if let cachedImage = MiniGameImageCache.shared.get(forKey: urlString) {
+            self.gifImage = cachedImage
+            self.isLoading = false
+            return
+        }
+        
         guard let url = URL(string: urlString) else {
             isLoading = false
             return
@@ -1007,6 +1035,10 @@ struct GIFImage: View {
                     let (data, _) = try await URLSession.shared.data(from: url)
                     return UIImage.animatedImage(withGIFData: data)
                 }.value
+                
+                if let decodedImage = image {
+                    MiniGameImageCache.shared.set(decodedImage, forKey: urlString)
+                }
                 
                 withAnimation(.easeOut(duration: 0.25)) {
                     self.gifImage = image
