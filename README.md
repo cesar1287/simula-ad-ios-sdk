@@ -51,6 +51,33 @@ graph TD
 
 ---
 
+## Repository & Folder Structure
+
+To support clean maintenance, isolation, and integration of the native SDK and the React Native wrapper, the codebase is structured into three distinct domains:
+
+```
+ad-sdk-ios/
+├── ios-sdk/                          # NATIVE iOS SDK BUILD & TESTS
+│   ├── ad-sdk-ios.xcodeproj/         # Native Xcode framework project
+│   ├── ad-sdk-iosTests/              # Native Swift thread-safety and decoder tests
+│   └── SampleApp/                    # Native iOS SwiftUI Showcase/Sample App
+│
+├── react-native-wrapper/             # REACT NATIVE SDK WRAPPER (NPM PACKAGE)
+│   ├── package.json                  # NPM Package manifest
+│   ├── simula-ad-sdk.podspec         # Podspec for autolinking recursively under ios/
+│   ├── src/
+│   │   └── index.tsx                 # JS/TS interface layer
+│   └── ios/                          # NATIVE SOURCE CONSOLIDATION
+│       ├── SDK/                      # Pure native Swift SDK source files (APIClient, views, etc.)
+│       └── Bridge/                   # React Native ObjC/Swift bridge modules and managers
+│
+└── RNSampleApp/                      # CONSUMER SHOWCASE REACT NATIVE APP
+    ├── package.json                  # Links to "simula-ad-sdk": "file:../react-native-wrapper"
+    └── metro.config.js               # Watch config resolving dependencies cleanly
+```
+
+---
+
 ## Installation
 
 ### Manual Integration
@@ -357,6 +384,36 @@ The React Native wrapper maps high-performance Objective-C synthetic blocks (`RC
 | `onGameOpen` | `{ gameName: string, description: string }` | Dispatched when the user taps a mini-game and its active gameplay webview begins loading. |
 | `onGameClose` | `{ gameName: string }` | Dispatched when a mini-game view is dismissed (returns the active game name) or when the menu catalog drawer itself is closed (`gameName: "menu"`). |
 | `onDestinationOpen` | `{ destinationType: "app" \| "web", target: string }` | Dispatched when an advertiser destination is intercepted (e.g. in-app Safari `SFSafariViewController` or in-app App Store `SKStoreProductViewController`). |
+
+---
+
+### 4. Testing & Verification
+
+To verify that changes are fully integrated and do not cause regressions across the JS, native module, or SwiftUI layers, you can execute the following verification suites:
+
+#### Run React Native Unit Tests (Jest)
+The React Native Jest suite validates the JS/TS layer, default properties, and the bridge callback event unpacking logic:
+```bash
+cd RNSampleApp
+npm test
+```
+
+#### Run the Showcase Sample App in iOS Simulator
+1. Install JS dependencies:
+   ```bash
+   cd RNSampleApp
+   npm install
+   ```
+2. Link and configure native Pods:
+   ```bash
+   cd ios
+   pod install
+   ```
+3. Boot the application on your simulator:
+   ```bash
+   cd ..
+   npx react-native run-ios
+   ```
 
 ---
 
