@@ -43,7 +43,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3C1DA0062FC0542300685095 /* ad-sdk-ios */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "ad-sdk-ios";
+			path = "../react-native-wrapper/ios/SDK";
 			sourceTree = "<group>";
 		};
 		3C1DA0122FC0542400685095 /* SampleApp */ = {

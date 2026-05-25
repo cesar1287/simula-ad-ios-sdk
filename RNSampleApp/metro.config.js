@@ -1,7 +1,7 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
 
-const sdkRoot = path.resolve(__dirname, '..');
+const sdkRoot = path.resolve(__dirname, '../react-native-wrapper');
 
 /**
  * Metro configuration

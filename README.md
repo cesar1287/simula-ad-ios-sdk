@@ -231,5 +231,134 @@ To fulfill strict production SDK mandates, the library strictly guards system re
 
 ---
 
+## React Native Integration Guide
+
+The **Simula MiniGame SDK** is fully compatible with React Native applications through the modern, local library bridge wrapper `react-native-wrapper`. This bridge abstracts the native Swift layouts under elegant TypeScript interfaces matching your web-native workflows.
+
+### 1. Installation
+
+#### Add the Dependency
+Map the bridge wrapper locally inside your React Native application’s `package.json`:
+
+```json
+"dependencies": {
+  "simula-ad-sdk": "file:../react-native-wrapper"
+}
+```
+
+Then run the installation within the root of your React Native project:
+
+```bash
+npm install
+```
+
+#### Link iOS Native Frameworks
+Navigate to your React Native project’s `ios/` folder and execute CocoaPods installation. The bridge `.podspec` automatically resolves and compiles the local wrapper bridge and native Swift SDK files recursively:
+
+```bash
+cd ios
+pod install
+```
+
+---
+
+### 2. React Native Quick Start Guide
+
+#### Step 1: Wrap your App in `<MiniGameProvider>`
+Initialize the provider at the absolute root of your React Native application (e.g., `App.tsx`) to configure credentials and session lifetimes:
+
+```tsx
+import React from 'react';
+import { MiniGameProvider } from 'simula-ad-sdk';
+import { MainScreen } from './src/MainScreen';
+
+export default function App() {
+  return (
+    <MiniGameProvider
+      apiKey="pub_eeee14c661ce47659a289db29364723a"
+      primaryUserID="user_rn_showcase_101"
+      hasPrivacyConsent={true}
+      devMode={false}      // Set true during offline simulator mocks
+      appDomain="coolaigames.com"
+    >
+      <MainScreen />
+    </MiniGameProvider>
+  );
+}
+```
+
+#### Step 2: Render the `<MiniGameMenu>` Overlay
+Import the responsive menu overlay, bind its active open state, and receive native synthetic callbacks in JavaScript:
+
+```tsx
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { MiniGameMenu } from 'simula-ad-sdk';
+
+export function MainScreen() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={() => setIsMenuOpen(true)}
+      >
+        <Text style={styles.buttonText}>Play with Luna</Text>
+      </TouchableOpacity>
+
+      <MiniGameMenu
+        isOpen={isMenuOpen}
+        charName="Luna"
+        charID="char_luna_101"
+        charImage="https://example.com/avatar.png"
+        messages={[
+          { role: 'user', content: 'Hey Luna, let\'s play some games!' },
+          { role: 'assistant', content: 'I have some awesome mini-games ready. Let\'s go!' }
+        ]}
+        theme={{
+          backgroundColor: '#07070a', // Custom premium dark backdrop
+          accentColor: '#00d2ff',     // Neon cyan glow indicators
+          iconCornerRadius: 16
+        }}
+        onImpression={(e) => console.log('Catalog opened, menuId:', e.menuId)}
+        onGameOpen={(e) => console.log('Started playing:', e.gameName)}
+        onGameClose={(e) => {
+          console.log('Dismissed game:', e.gameName);
+          // VERY IMPORTANT: Synchronize your React state when the menu overlay is closed!
+          if (e.gameName === 'menu') {
+            setIsMenuOpen(false);
+          }
+        }}
+        onDestinationOpen={(e) => {
+          console.log(`Opened in-app destination: Type: ${e.destinationType}, Target: ${e.target}`);
+        }}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#050508' },
+  button: { paddingVertical: 14, paddingHorizontal: 28, backgroundColor: '#00d2ff', borderRadius: 12 },
+  buttonText: { color: '#000000', fontSize: 16, fontWeight: 'bold' }
+});
+```
+
+---
+
+### 3. Developer Event Handlers and Callback API
+
+The React Native wrapper maps high-performance Objective-C synthetic blocks (`RCTDirectEventBlock`) into clean direct JS/TS callbacks containing structured event payloads:
+
+| Callback Prop | Event Payload | Trigger Description |
+|---|---|---|
+| `onImpression` | `{ menuId: string }` | Dispatched immediately when the minigames catalog is fetched and displayed. |
+| `onGameOpen` | `{ gameName: string, description: string }` | Dispatched when the user taps a mini-game and its active gameplay webview begins loading. |
+| `onGameClose` | `{ gameName: string }` | Dispatched when a mini-game view is dismissed (returns the active game name) or when the menu catalog drawer itself is closed (`gameName: "menu"`). |
+| `onDestinationOpen` | `{ destinationType: "app" \| "web", target: string }` | Dispatched when an advertiser destination is intercepted (e.g. in-app Safari `SFSafariViewController` or in-app App Store `SKStoreProductViewController`). |
+
+---
+
 ## License & Support
 For SDK support, updates, or API credentials, contact the platform operations team or check your publisher portal dashboard.

@@ -2169,7 +2169,7 @@ SPEC CHECKSUMS:
   ReactCodegen: c8f81e6c6f762dcf442a6203a1fb58f7dafc8014
   ReactCommon: 7dfc3250793bf36cf221096ff59e1179e13eef7f
   ReactNativeDependencies: 5bbaadab422365e780abede18fb9f69379aa5b2a
-  simula-ad-sdk: 42413901e6fb5fa974ffc8553d2e6a7911583d71
+  simula-ad-sdk: 93db665dff36b538b41d75e5e455e0c6199d3bb9
   Yoga: 77dfa8673de2874e1855002ae59c68b8be9b007b
 
 PODFILE CHECKSUM: 445eda438415993156cda15d2aeb99e5f16efd03
